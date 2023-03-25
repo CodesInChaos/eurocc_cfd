@@ -4,6 +4,8 @@ use ndarray::Array2;
 use std::time::{Instant, Duration};
 mod cfdio;
 use crate::cfdio::writedatafiles;
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
 
 fn main() {
     //simulation sizes
@@ -33,6 +35,10 @@ fn main() {
     let n: i64 = nbase*scalefactor;
     let re = re / (scalefactor as f64);
 
+
+    #[cfg(feature = "rayon")]
+    println!("Running CFD on {} x {} grid in parallel", m, n);
+    #[cfg(not(feature = "rayon"))]
     println!("Running CFD on {} x {} grid in serial", m, n);
 
     let mdim: usize = (m + 2) as usize;
@@ -88,11 +94,21 @@ fn main() {
     println!("Each iteration took {:?}", Duration::from_secs_f64(titer));
 
     writedatafiles(&psi, &m, &n, &scalefactor);
-
-
-
 }
 
+#[cfg(feature = "rayon")]
+fn jacobistep<'a>(psi_temp: &'a mut Array2<f64>, psi: &Array2<f64>, m:usize, n:usize) -> &'a Array2<f64> {
+    psi_temp.outer_iter_mut().into_par_iter().enumerate().for_each(|(i, mut view)| {
+        if (1..m-1).contains(&i) {
+            for j in 1..n-1 {
+                view[j] = 0.25*(psi[[i-1,j]] + psi[[i+1,j]] + psi[[i,j-1]] + psi[[i,j+1]]);
+            }
+        }
+    });
+    psi_temp
+}
+
+#[cfg(not(feature = "rayon"))]
 fn jacobistep<'a>(psi_temp: &'a mut Array2<f64>, psi: & Array2<f64>, m:usize, n:usize) -> &'a Array2<f64>{
     for i in 1..m-1 {
         //let j_u: usize = j as usize;

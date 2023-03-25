@@ -3,7 +3,11 @@ name = "cfd_rayon"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+rayon = ["dep:rayon", "ndarray/rayon"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 ndarray = { version = "0.15.6" }
+rayon = { version = "1.7.0", optional = true }
